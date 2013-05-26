@@ -1,38 +1,39 @@
 package WebService::Readability::Shortener;
 use strict;
 use warnings;
-use WebService::Readability;
-use LWP::UserAgent;
-use HTTP::Request::Common qw/POST/;
+use utf8;
+use parent qw/WebService::Readability::Base/;
 use JSON;
+use HTTP::Request::Common qw/POST/;
+use LWP::UserAgent;
 
-
-our $VERSION = '0.1';
-our $ENDPOINT = 'http://'.$WebService::Readability::ENDPOINT->{base_url}. '/shortener/v1/urls';
 
 sub get {
     my ($self, $url) = @_;
-    my $content = $self->shortener($url);
+    my $res = $self->shortener($url);
     
-    return unless $content->{success};
+    return unless $res->{content}->{success};
 
-    return (exists($content->{meta}->{rdd_url})) ? $content->{meta}->{rdd_url} : '';
+    return (exists($res->{content}->{meta}->{rdd_url})) ? $res->{content}->{meta}->{rdd_url} : '';
 }
 
 sub shortener {
     my ($self, $url) = @_;
-    my $endpoint = $WebService::Readability::Shortener::ENDPOINT;
     
     my %param = (url => $url);
+    my $endpoint = 'http://'.$self->api_uri('base_url').'/api/shortener/v1/urls';
     my $req = POST($endpoint, [url => $url]);
-
     my $ua = LWP::UserAgent->new;
-
     my $res = $ua->request($req);
+    my $content = ($res->is_success) ? JSON::from_json($res->content) : {};
 
-    return ($res->is_success) ? JSON::from_json($res->content) : {};
+    return {
+        responce => $res,
+        content  => $content,
+    };
 }
 
+1;
 __END__
 
 =head1 NAME

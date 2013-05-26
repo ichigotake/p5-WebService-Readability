@@ -7,5 +7,5 @@ use WebService::Readability::Shortener;
 
 my $url = WebService::Readability::Shortener->get('http://hachiojipm.org/');
 
-print $url;
+print $url . "\n";
 

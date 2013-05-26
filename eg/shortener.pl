@@ -8,8 +8,8 @@ use Data::Dumper;
 
 my $content = WebService::Readability::Shortener->shortener('http://hachiojipm.org/');
 
-if ( $content->{success} ) {
-    print Dumper $content;
+if ( $content->{content}->{success} ) {
+    print Dumper $content->{content};
 } else {
     print "request failed\n";
 }

@@ -1,89 +1,25 @@
 package WebService::Readability;
 use strict;
 use warnings;
-use OAuth::Lite::Consumer;
-use parent qw/Class::Accessor::Fast/;
-__PACKAGE__->mk_accessors(qw/consumer request_token access_token/);
+use utf8;
+use parent qw/WebService::Readability::Base/;
+use WebService::Readability::Parser;
+use WebService::Readability::Reader;
+use WebService::Readability::Shortener;
 
-use JSON;
+our $VERSION = '0.2';
 
-our $VERSION = '0.1';
-our $ENDPOINT = {
-    base_url        => 'www.readability.com/api',
-    authorize       => 'www.readability.com/api/rest/v1/oauth/authorize/',
-    request_token   => 'www.readability.com/api/rest/v1/oauth/request_token/',
-    access_token    => 'www.readability.com/api/rest/v1/oauth/access_token/',
-};
 
-sub new {
-    my ($class, @args) = @_;
-    my $self = bless {@args}, $class;
-
-    unless ( $self->consumer ) {
-        $self->{consumer} = OAuth::Lite::Consumer->new(
-            consumer_key => $self->{consumer_key},
-            consumer_secret => $self->{consumer_secret},
-        );
-    }
-
-    unless ( $self->request_token ) {
-        $self->{request_token} = $self->{consumer}->obtain_access_token(
-            url => 'https://' . $self->ENDPOINT->{access_token},
-            params => {
-                x_auth_username => $self->{username},
-                x_auth_password => $self->{password},
-                x_auth_mode => 'client_auth',
-            }
-        );
-    }
-
-    unless ( $self->access_token ) {
-        $self->{access_token} = OAuth::Lite::Token->new(
-            token => $self->{request_token}->{token}->{token},
-            secret => $self->{request_token}->{token}->{secret},
-        );
-    }
-
-    return $self;
-}
-
-sub oauth_request {
-    my ($self, $endpoint, $method) = @_;
-    $method ||= 'GET';
-
-    return $self->consumer->gen_oauth_request(
-        token => $self->access_token,
-        method => $method,
-        url => $endpoint,
-    );
-}
-
-sub reader {
-    my ($self) = @_;
-
-    unless (exists($self->{reader})) {
-        $self->{reader} = WebService::Readability::ReaderAPI->new(
-            consumer        => $self->{consumer},
-            request_token   => $self->{request_token},
-            access_token    => $self->{access_token},
-        );
-    }
-
-    return $self->{reader};
+sub shortener {
+    return shift->_create_instance('WebService::Readability::Shortener');
 }
 
 sub parser {
-    my ($self) = @_;
+    return shift->_create_instance('WebService::Readability::Parser');
+}
 
-    unless (exists($self->{parser})) {
-        $self->{parser} = WebService::Readability::ParserAPI->new(
-            consumer        => $self->{consumer},
-            request_token   => $self->{request_token},
-            access_token    => $self->{access_token},
-        );
-    }
-
-    return $self->{parser};
+sub reader {
+    return shift->_create_instance('WebService::Readability::Reader');
 }
 
 1;
@@ -93,11 +29,42 @@ __END__
 
 =head1 NAME
 
-WebService::Readability - Readability webservice modules base class
+WebService::Readability - Access all the capabilities of Readability
+
+=head1 SYNOPSIS
+
+    use WebService::Readability;
+
+    my $r = WebService::Readability->new(
+        # for Reader API
+        username        => 'username',
+        password        => 'password',
+        consumer_key    => 'Key',
+        consumer_secret => 'Secret'
+        # for Parser API
+        token => 'Token',
+    );
+
+    #format: $r->$api_name->$api_method($param, $method)
+
+    $r->reader->reader->bookmarks({
+        order => '-date_added',
+        page  => 2,
+    }, 'GET');
+
+    $r->parser->parser({
+        url => 'https://github.com/ichigotake/p5-WebService-Readability',
+    }, 'GET');
 
 =head1 SEE ALSO
 
 Developers — Readability L<https://www.readability.com/developers>
+
+WebService::Readability::Shortener
+
+WebService::Readability::Parser
+
+WebService::Readability::Reader
 
 =head1 AUTHOR
 
